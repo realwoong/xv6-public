@@ -443,6 +443,10 @@ sys_pipe(void)
   return 0;
 }
 
+
+
+
+//pa4
 int sys_swapread(void)
 {
 	char* ptr;

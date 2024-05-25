@@ -25,9 +25,13 @@
 static void itrunc(struct inode*);
 // there should be one superblock per disk device, but we run with
 // only one device
-struct superblock sb; 
+struct superblock sb;
+
+//pa4
 int nr_sectors_read;
 int nr_sectors_write;
+//pa4
+
 // Read the super block.
 void
 readsb(int dev, struct superblock *sb)

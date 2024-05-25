@@ -23,10 +23,12 @@ struct {
   struct run *freelist;
 } kmem;
 
+//pa4 skel
 struct page pages[PHYSTOP/PGSIZE];
 struct page *page_lru_head;
 int num_free_pages;
 int num_lru_pages;
+//pa4 skel
 
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
