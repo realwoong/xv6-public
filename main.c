@@ -1,3 +1,4 @@
+//
 #include "types.h"
 #include "defs.h"
 #include "param.h"
@@ -10,6 +11,9 @@ static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
+//pa4
+extern void init_swap_space();
+//pa4
 
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
@@ -28,6 +32,11 @@ main(void)
   uartinit();      // serial port
   pinit();         // process table
   tvinit();        // trap vectors
+  
+  //pa4
+  init_swap_space(); // ?Š¤?™‘ ê³µê°„ ì´ˆê¸°?™” ?˜¸ì¶?
+  //pa4
+
   binit();         // buffer cache
   fileinit();      // file table
   ideinit();       // disk 

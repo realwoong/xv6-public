@@ -1,3 +1,4 @@
+//
 #include "param.h"
 #include "types.h"
 #include "defs.h"
@@ -10,6 +11,9 @@
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 
+//____pa4
+void bitmap_clear(int blkno);
+//____pa4
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
 void
@@ -32,7 +36,7 @@ seginit(void)
 // Return the address of the PTE in page table pgdir
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page table pages.
-static pte_t *
+pte_t *
 walkpgdir(pde_t *pgdir, const void *va, int alloc)
 {
   pde_t *pde;
@@ -292,6 +296,11 @@ freevm(pde_t *pgdir)
     if(pgdir[i] & PTE_P){
       char * v = P2V(PTE_ADDR(pgdir[i]));
       kfree(v);
+    //____pa4 start
+    } else if (pgdir[i] & PTE_SWAP) {
+      int swapblk = PTE_ADDR(pgdir[i]) >> PTE_SHIFT;
+      bitmap_clear(swapblk);
+    //____pa4 end
     }
   }
   kfree((char*)pgdir);
@@ -325,17 +334,33 @@ copyuvm(pde_t *pgdir, uint sz)
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
-    if(!(*pte & PTE_P))
-      panic("copyuvm: page not present");
-    pa = PTE_ADDR(*pte);
-    flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
-      kfree(mem);
-      goto bad;
+    if(!(*pte & PTE_P) && !(*pte & PTE_SWAP))
+      panic("copyuvm: page not present or swapped");
+    
+    //____pa4 start
+    if(*pte & PTE_P){
+      pa = PTE_ADDR(*pte);
+      flags = PTE_FLAGS(*pte);
+      if((mem = kalloc()) == 0)
+        goto bad;
+      memmove(mem, (char*)P2V(pa), PGSIZE);
+      if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0) {
+        kfree(mem);
+        goto bad;
+      }
+    } else if(*pte & PTE_SWAP) {
+      // 胶恳等 其捞瘤 贸府
+      int swapblk = PTE_ADDR(*pte) >> PTE_SHIFT;
+      if((mem = kalloc()) == 0)
+        goto bad;
+      swapread(mem, swapblk);
+      flags = PTE_FLAGS(*pte) & ~PTE_SWAP;
+      if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags | PTE_P) < 0) {
+        kfree(mem);
+        goto bad;
+      }
     }
+    //____pa4 end
   }
   return d;
 

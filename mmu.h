@@ -100,6 +100,12 @@ struct segdesc {
 #define PTE_ADDR(pte)   ((uint)(pte) & ~0xFFF)
 #define PTE_FLAGS(pte)  ((uint)(pte) &  0xFFF)
 
+//____pa4
+#define PTE_A           0x20   // Accessed
+#define PTE_SWAP        0x200   // Swap
+#define PTE_SHIFT       12      // Swap shift
+//pa4
+
 #ifndef __ASSEMBLER__
 typedef uint pte_t;
 
@@ -183,6 +189,9 @@ struct page{
 	struct page *prev;
 	pde_t *pgdir;
 	char *vaddr;
+  //pa4
+  int swapblk;
+  //pa4
 };
 
 

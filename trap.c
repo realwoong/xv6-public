@@ -8,6 +8,11 @@
 #include "traps.h"
 #include "spinlock.h"
 
+//____pa4
+pte_t *walkpgdir(pde_t *pgdir, const void *va, int alloc);
+void bitmap_clear(int blkno);
+//____pa4
+
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
@@ -78,7 +83,33 @@ trap(struct trapframe *tf)
     lapiceoi();
     break;
 
-  //PAGEBREAK: 13
+  //____pa4 start: 페이지 폴트 처리 추가
+  case T_PGFLT:
+    {
+      uint va = rcr2();
+      pte_t *pte = walkpgdir(myproc()->pgdir, (void *)va, 0);
+      if (pte && (*pte & PTE_SWAP)) {
+        // 스왑된 페이지를 스왑 인
+        char *mem = kalloc();
+        if (mem == 0) {
+          cprintf("trap: out of memory\n");
+          myproc()->killed = 1;
+          break;
+        }
+        int swapblk = PTE_ADDR(*pte) >> PTE_SHIFT;
+        swapread(mem, swapblk);
+        *pte = V2P(mem) | PTE_P | PTE_U | PTE_W;
+        lcr3(V2P(myproc()->pgdir));  // TLB flush
+        bitmap_clear(swapblk);
+      } else {
+        // 페이지 폴트가 발생했으나 스왑된 페이지가 아닌 경우
+        cprintf("unexpected page fault at va 0x%x\n", va);
+        myproc()->killed = 1;
+      }
+      break;
+    }
+  //____pa4 end
+
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.

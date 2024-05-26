@@ -1,4 +1,4 @@
-// File system implementation.  Five layers:
+// File system implementation.  Five layers://
 //   + Blocks: allocator for raw disk blocks.
 //   + Log: crash recovery for multi-step updates.
 //   + Files: inode allocator, reading, writing, metadata.
@@ -20,6 +20,23 @@
 #include "fs.h"
 #include "buf.h"
 #include "file.h"
+
+//pa4
+#define BITMAP_SIZE (SWAPMAX / PGSIZE)
+char swap_bitmap[BITMAP_SIZE / 8];
+// 비트맵 함수 추가
+void bitmap_set(int idx) {
+    swap_bitmap[idx / 8] |= (1 << (idx % 8));
+}
+
+void bitmap_clear(int idx) {
+    swap_bitmap[idx / 8] &= ~(1 << (idx % 8));
+}
+
+int bitmap_test(int idx) {
+    return swap_bitmap[idx / 8] & (1 << (idx % 8));
+}
+//pa4
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static void itrunc(struct inode*);
@@ -691,6 +708,10 @@ void swapread(char* ptr, int blkno)
 		memmove(ptr + i * BSIZE, bp->data, BSIZE);
 		brelse(bp);
 	}
+
+  //pa4
+  bitmap_clear(blkno);
+  //pa4
 }
 
 void swapwrite(char* ptr, int blkno)
@@ -710,6 +731,28 @@ void swapwrite(char* ptr, int blkno)
 		bwrite(bp);
 		brelse(bp);
 	}
+
+  //pa4
+  bitmap_set(blkno);
+  //pa4
 }
+
+//pa4
+int alloc_swap_block() {
+    for (int i = 0; i < BITMAP_SIZE; i++) {
+        if (!bitmap_test(i)) {
+            bitmap_set(i);
+            return i;
+        }
+    }
+    return -1; // 스왑 공간이 부족한 경우
+}
+void init_swap_space() {
+    memset(swap_bitmap, 0, sizeof(swap_bitmap));
+    nr_sectors_read = 0;
+    nr_sectors_write = 0;
+}
+
+//pa4
 
 
